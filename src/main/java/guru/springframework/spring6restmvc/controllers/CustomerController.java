@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -31,7 +32,8 @@ public class CustomerController {
   private final CustomerService customerService;
 
   @PatchMapping(CUSTOMER_PATH_ID)
-  public ResponseEntity<?> patchById(@PathVariable("id") UUID customerId, @RequestBody CustomerDTO customer) {
+  public ResponseEntity<?> patchById(@PathVariable("id") UUID customerId,
+      @Validated @RequestBody CustomerDTO customer) {
     if (customerService.patchById(customerId, customer).isEmpty()) {
       throw new NotFoundException();
     }
@@ -47,7 +49,8 @@ public class CustomerController {
   }
 
   @PutMapping(CUSTOMER_PATH_ID)
-  public ResponseEntity<?> updateById(@PathVariable("id") UUID customerId, @RequestBody CustomerDTO customer) {
+  public ResponseEntity<?> updateById(@PathVariable("id") UUID customerId,
+      @Validated @RequestBody CustomerDTO customer) {
     if (customerService.updateById(customerId, customer).isEmpty()) {
       throw new NotFoundException();
     }
@@ -55,7 +58,7 @@ public class CustomerController {
   }
 
   @PostMapping(CUSTOMER_PATH)
-  public ResponseEntity<?> saveNewCustomer(@RequestBody CustomerDTO customer) {
+  public ResponseEntity<?> saveNewCustomer(@Validated @RequestBody CustomerDTO customer) {
     CustomerDTO savedCustomer = customerService.saveNewCustomer(customer);
     HttpHeaders headers = new HttpHeaders();
     headers.add("Location", String.format("/api/v1/customer/%s", savedCustomer.getId()));

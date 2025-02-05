@@ -3,6 +3,7 @@ package guru.springframework.spring6restmvc.controllers;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +15,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import guru.springframework.spring6restmvc.model.BeerDTO;
+import guru.springframework.spring6restmvc.model.BeerStyle;
 import guru.springframework.spring6restmvc.services.BeerService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +51,7 @@ public class BeerController {
   }
 
   @PutMapping(BEER_PATH_ID)
-  public ResponseEntity<?> updateById(@PathVariable("id") UUID beerId, @RequestBody BeerDTO beer) {
+  public ResponseEntity<?> updateById(@PathVariable("id") UUID beerId, @Validated @RequestBody BeerDTO beer) {
     if (beerService.updateById(beerId, beer).isEmpty()) {
       throw new NotFoundException();
     }
@@ -65,12 +68,16 @@ public class BeerController {
   }
 
   @GetMapping(BEER_PATH)
-  public List<BeerDTO> listBeers() {
-    return beerService.listBeers();
+  public Page<BeerDTO> listBeers(@RequestParam(required = false) String beerName,
+      @RequestParam(required = false) BeerStyle beerStyle,
+      @RequestParam(required = false, defaultValue = "false") Boolean showInventory,
+      @RequestParam(required = false) Integer pageNumber,
+      @RequestParam(required = false) Integer pageSize) {
+    return beerService.listBeers(beerName, beerStyle, showInventory, pageNumber, pageSize);
   }
 
   @GetMapping(BEER_PATH_ID)
-  public BeerDTO getBeerById(@PathVariable("id") UUID id) {
+  public BeerDTO getBeerById(@PathVariable UUID id) {
     return beerService.getBeerById(id).orElseThrow(NotFoundException::new);
   }
 

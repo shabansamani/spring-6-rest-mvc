@@ -1,18 +1,23 @@
 package guru.springframework.spring6restmvc.services;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import ch.qos.logback.core.util.StringUtil;
+import guru.springframework.spring6restmvc.entities.Beer;
 import guru.springframework.spring6restmvc.mappers.BeerMapper;
 import guru.springframework.spring6restmvc.model.BeerDTO;
+import guru.springframework.spring6restmvc.model.BeerStyle;
 import guru.springframework.spring6restmvc.repositories.BeerRepository;
 import lombok.RequiredArgsConstructor;
 
@@ -24,12 +29,59 @@ public class BeerServiceJPA implements BeerService {
   private final BeerRepository beerRepository;
   private final BeerMapper beerMapper;
 
+  private final static int DEFAULT_PAGE_NUMBER = 0;
+  private final static int DEFAULT_PAGE_SIZE = 25;
+
+  public PageRequest buildPageRequest(Integer pageNumber, Integer pageSize) {
+    if (pageNumber == null || pageNumber <= 0)
+      pageNumber = DEFAULT_PAGE_NUMBER;
+
+    if (pageSize == null || pageSize <= 0)
+      pageSize = DEFAULT_PAGE_SIZE;
+
+    if (pageSize >= 1000)
+      pageSize = 1000;
+
+    Sort sort = Sort.by(Sort.Order.asc("beerName"));
+
+    return PageRequest.of(pageNumber, pageSize, sort);
+  }
+
   @Override
-  public List<BeerDTO> listBeers() {
-    return this.beerRepository.findAll()
-        .stream()
-        .map(beerMapper::beerToBeerDTO)
-        .collect(Collectors.toList());
+  public Page<BeerDTO> listBeers(String beerName, BeerStyle beerStyle, Boolean showInventory, Integer pageNumber,
+      Integer pageSize) {
+
+    PageRequest pageRequest = buildPageRequest(pageNumber, pageSize);
+
+    Page<Beer> beerPage;
+
+    if (StringUtils.hasText(beerName) && Objects.nonNull(beerStyle)) {
+      beerPage = listBeersByNameAndStyle(beerName, beerStyle, pageRequest);
+    } else if (StringUtils.hasText(beerName)) {
+      beerPage = listBeersByName(beerName, pageRequest);
+    } else if (!Objects.isNull(beerStyle)) {
+      beerPage = listBeersByStyle(beerStyle, pageRequest);
+    } else {
+      beerPage = this.beerRepository.findAll(pageRequest);
+    }
+
+    if (Objects.nonNull(showInventory) && !showInventory) {
+      beerPage.forEach(beer -> beer.setQuantityOnHand(null));
+    }
+
+    return beerPage.map(beerMapper::beerToBeerDTO);
+  }
+
+  private Page<Beer> listBeersByNameAndStyle(String beerName, BeerStyle beerStyle, PageRequest pageRequest) {
+    return beerRepository.findAllByBeerNameIsLikeIgnoreCaseAndBeerStyle("%" + beerName + "%", beerStyle, pageRequest);
+  }
+
+  private Page<Beer> listBeersByStyle(BeerStyle beerStyle, PageRequest pageRequest) {
+    return beerRepository.findAllByBeerStyle(beerStyle, pageRequest);
+  }
+
+  public Page<Beer> listBeersByName(String beerName, PageRequest pageRequest) {
+    return beerRepository.findAllByBeerNameIsLikeIgnoreCase("%" + beerName + "%", pageRequest);
   }
 
   @Override
